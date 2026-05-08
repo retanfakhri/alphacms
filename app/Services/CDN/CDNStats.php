@@ -17,6 +17,12 @@ class CDNStats
     public const TYPE_OPERATIONAL = 'operational';
     public const TYPE_DIAGNOSTIC = 'diagnostic';
 
+    /**
+     * Finding #6: Probabilistic sampling rate (0.0 to 1.0).
+     * Reduces Redis overhead for high-volume operational metrics.
+     */
+    private const SAMPLING_RATE = 1.0; 
+
     private static function prefix(string $provider = self::DEFAULT_PROVIDER): string
     {
         return self::BASE_PREFIX . $provider . ':';
@@ -28,6 +34,10 @@ class CDNStats
      */
     public static function recordOutboundAttempt(string $provider = self::DEFAULT_PROVIDER): void
     {
+        if (! self::shouldSample()) {
+            return;
+        }
+
         $prefix = self::prefix($provider);
         $key = $prefix . 'outbound_attempts:' . self::hourKey();
 
@@ -69,6 +79,10 @@ class CDNStats
 
     public static function recordLatency(float $ms, string $type = self::TYPE_OPERATIONAL, string $provider = self::DEFAULT_PROVIDER): void
     {
+        if ($type === self::TYPE_OPERATIONAL && ! self::shouldSample()) {
+            return;
+        }
+
         $hourKey = self::hourKey();
         $prefix = self::prefix($provider);
         $typePrefix = "{$type}:";
@@ -282,5 +296,17 @@ class CDNStats
     private static function hourKey(): string
     {
         return Carbon::now()->format('Y-m-d-H');
+    }
+
+    /**
+     * Finding #6: Probabilistic sampling check.
+     */
+    private static function shouldSample(): bool
+    {
+        if (self::SAMPLING_RATE >= 1.0) {
+            return true;
+        }
+
+        return (mt_rand() / mt_getrandmax()) <= self::SAMPLING_RATE;
     }
 }

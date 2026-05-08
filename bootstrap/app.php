@@ -25,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SessionSecurityMiddleware::class,
             \App\Http\Middleware\UpdateUserLastActive::class,
             \App\Http\Middleware\CDNCorrelationMiddleware::class,
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
+            \App\Http\Middleware\VerifyCDNRequestMiddleware::class,
         ]);
         $middleware->alias([
             'admin' => \App\Http\Middleware\CanAccessAdmin::class,
