@@ -39,6 +39,13 @@ createInertiaApp({
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
+            // Admin auth pages (login, forgot-password, reset-password,
+            // two-factor-challenge) bring their own AuthLayout. Without
+            // this guard they'd be wrapped in AdminLayout — whose Sidebar/
+            // Header read `auth.user.name`, which is null on unauthenticated
+            // pages, causing a TypeError at mount and a blank page.
+            case name.startsWith('admin/auth/'):
+                return null;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
             case name.startsWith('admin/'):
