@@ -12,8 +12,10 @@ use App\Services\CDN\CDNPurgeBuffer;
 use App\Settings\CDNSettings;
 use App\Support\CDN\WarmupThrottle;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
+use App\Auth\AdminEligibleUserProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +38,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Auth::provider('admin_eligible', function ($app, array $config) {
+            return new AdminEligibleUserProvider(
+                $app['hash'],
+                $config['model'] ?? \App\Models\User::class,
+            );
+        });
+
         \App\Models\User::observe(\App\Observers\UserObserver::class);
         $this->configureDefaults();
 

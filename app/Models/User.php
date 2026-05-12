@@ -66,7 +66,6 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         'preferred_topics',
         'notification_preferences',
         'onboarding_completed_at',
-        'user_type',
     ];
 
     protected $hidden = [
@@ -101,7 +100,6 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
             'is_private' => 'boolean',
             'is_active' => 'boolean',
             'account_status' => AccountStatus::class,
-            'user_type' => 'array',
             'preferred_topics' => 'array',
             'notification_preferences' => 'array',
             'onboarding_completed_at' => 'datetime',
@@ -114,7 +112,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'account_status', 'is_active'])
+            ->logOnly(['name', 'email', 'account_status'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();
     }
@@ -185,12 +183,20 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
 
     public function getAvatarUrlAttribute(): string
     {
-        return $this->getFirstMediaUrl('avatars', 'thumb') ?: $this->getFirstMediaUrl('avatars') ?: asset('images/defaults/avatar.webp');
+        try {
+            return $this->getFirstMediaUrl('avatars', 'thumb') ?: $this->getFirstMediaUrl('avatars') ?: asset('images/defaults/avatar.webp');
+        } catch (\Throwable) {
+            return asset('images/defaults/avatar.webp');
+        }
     }
 
     public function getCoverUrlAttribute(): string
     {
-        return $this->getFirstMediaUrl('covers', 'optimized') ?: $this->getFirstMediaUrl('covers') ?: '/assets/images/menu-heade.jpg';
+        try {
+            return $this->getFirstMediaUrl('covers', 'optimized') ?: $this->getFirstMediaUrl('covers') ?: '/assets/images/menu-heade.jpg';
+        } catch (\Throwable) {
+            return '/assets/images/menu-heade.jpg';
+        }
     }
 
     /**
@@ -199,7 +205,7 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
 
     public function isActive(): bool
     {
-        return $this->is_active && $this->account_status === AccountStatus::Active;
+        return (bool) $this->is_active && $this->account_status === AccountStatus::Active;
     }
 
     public function isBanned(): bool
@@ -207,12 +213,11 @@ class User extends Authenticatable implements HasMedia, MustVerifyEmail
         return $this->account_status === AccountStatus::Banned || !is_null($this->banned_at);
     }
 
+    /**
+     * Centralized check for administrative access.
+     */
     public function canAccessAdminPanel(): bool
     {
-        if (!is_array($this->user_type)) {
-            return ($this->user_type === 'admin' || $this->user_type === 'writer') && $this->isActive();
-        }
-
-        return (in_array('admin', $this->user_type) || in_array('writer', $this->user_type)) && $this->isActive();
+        return $this->isActive() && $this->can('access_admin_panel');
     }
 }

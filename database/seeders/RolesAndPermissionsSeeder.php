@@ -1,55 +1,90 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 1. Setup 'web' guard roles (Writer & User)
-        // User wants these to have NO permissions assigned here.
-        $webGuard = 'web';
-        
-        Role::firstOrCreate(['name' => 'writer', 'guard_name' => $webGuard]);
-        Role::firstOrCreate(['name' => 'user', 'guard_name' => $webGuard]);
-
-        // 2. Setup 'admin' guard (Administrative only)
-        $adminGuard = 'admin';
-
-        // Delete 'writer' and 'user' roles from 'admin' guard if they exist
-        Role::where('guard_name', $adminGuard)->whereIn('name', ['writer', 'user'])->delete();
-
-        // Ensure the 'admin' role exists for 'admin' guard
-        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $adminGuard]);
-
-        // Basic administrative permissions list
-        $adminPermissions = [
-            'access dashboard',
-            'manage users',
-            'manage settings',
-            'create articles',
-            'edit articles',
-            'delete articles',
-            'publish articles',
-            'manage own articles',
-            'upload media',
+        // 1. تعريف كافة الصلاحيات بشكل صريح
+        $permissions = [
+            'access_admin_panel',
+            'manage_users',
+            'manage_roles',
+            'manage_permissions',
+            'manage_settings',
+            'manage_content',
+            'create_articles',
+            'edit_articles',
+            'publish_articles',
+            'delete_articles',
+            'create_news',
+            'edit_news',
+            'publish_news',
+            'delete_news',
+            'manage_general_settings',
+            'manage_smtp_settings',
+            'manage_social_settings',
+            'manage_tracking_settings',
+            'manage_media_settings',
+            'manage_third_party_settings',
+            'manage_ai_settings',
+            'manage_cdn_settings',
+            'flush_settings_cache',
+            'moderate_comments',
         ];
 
-        foreach ($adminPermissions as $p) {
-            Permission::firstOrCreate(['name' => $p, 'guard_name' => $adminGuard]);
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
-        // Admin role gets all admin guard permissions
-        $adminRole->syncPermissions(Permission::where('guard_name', $adminGuard)->get());
+        // 2. إعداد الأدوار
+        
+        // Super Admin: يملك كل الصلاحيات في قاعدة البيانات + Gate bypass
+        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+        $superAdminRole->syncPermissions(Permission::all());
+
+        // Admin: site-wide management excluding sensitive integrations (SMTP, CDN, third-party, AI)
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $adminRole->syncPermissions([
+            'access_admin_panel',
+            'manage_users',
+            'manage_content',
+            'moderate_comments',
+            'manage_general_settings',
+            'manage_social_settings',
+            'manage_tracking_settings',
+            'manage_media_settings',
+            'create_articles',
+            'edit_articles',
+            'publish_articles',
+            'delete_articles',
+            'create_news',
+            'edit_news',
+            'publish_news',
+            'delete_news',
+        ]);
+
+        // Writer
+        $writerRole = Role::firstOrCreate(['name' => 'writer', 'guard_name' => 'web']);
+        $writerRole->syncPermissions([
+            'access_admin_panel',
+            'create_articles',
+            'edit_articles',
+            'delete_articles',
+            'create_news',
+            'edit_news',
+            'delete_news',
+        ]);
+
+        // Regular User
+        Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
     }
 }

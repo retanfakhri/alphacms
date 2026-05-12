@@ -42,10 +42,6 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        'admin' => [
-            'driver' => 'session',
-            'provider' => 'users',
-        ],
     ],
 
     /*
@@ -71,10 +67,14 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        // Same User model, filtered to admin-eligible accounts. Backs the
+        // `admins` password broker so reset attempts for frontend-only
+        // users return INVALID_USER (we translate that to a generic
+        // success message to prevent enumeration).
+        'admin_users' => [
+            'driver' => 'admin_eligible',
+            'model' => env('AUTH_MODEL', User::class),
+        ],
     ],
 
     /*
@@ -101,6 +101,13 @@ return [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
+            'throttle' => 60,
+        ],
+        // Shorter window for admin reset tokens; backed by admin-eligible provider.
+        'admins' => [
+            'provider' => 'admin_users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 30,
             'throttle' => 60,
         ],
     ],

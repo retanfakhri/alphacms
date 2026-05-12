@@ -7,6 +7,12 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\PermissionController;
 
+// Admin Auth (publicly accessible — login, logout, password reset).
+// Mounted at /admin/auth/* with the `admin.auth.*` name prefix.
+Route::prefix('admin')->name('admin.')->group(function () {
+    require __DIR__ . '/admin/auth.php';
+});
+
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', function () {
         return Inertia::render('admin/dashboard');
