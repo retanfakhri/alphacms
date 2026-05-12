@@ -156,11 +156,20 @@ test('admin login is throttled after 3 failed attempts in a minute', function ()
     $response->assertSessionHasErrors('email');
     $message = session('errors')->getBag('default')->first('email');
 
-    // The throttle message includes either "seconds" or, in localised builds,
-    // the localised equivalent. Asserting it's the throttle string rather than
-    // auth.failed by checking it differs from a fresh-bucket "wrong password".
+    // Assert it's the throttle message (not auth.failed) without binding to a
+    // specific seconds count — the countdown ticks during the assertion window
+    // and would otherwise make this test flaky (e.g. 60 vs 59).
     expect($message)->not->toBe(__('auth.failed'));
-    expect($message)->toBe(__('auth.throttle', ['seconds' => 60, 'minutes' => 1]));
+
+    // Build the set of acceptable throttle strings (60s and 59s — the only
+    // two values availableIn can plausibly return during this assertion).
+    $acceptable = [
+        __('auth.throttle', ['seconds' => 60, 'minutes' => 1]),
+        __('auth.throttle', ['seconds' => 59, 'minutes' => 1]),
+    ];
+    expect(in_array($message, $acceptable, true))->toBeTrue(
+        "Expected throttle message, got: {$message}",
+    );
 
     expect(auth()->check())->toBeFalse();
 });
