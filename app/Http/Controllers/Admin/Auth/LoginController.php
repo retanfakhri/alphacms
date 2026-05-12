@@ -75,19 +75,21 @@ class LoginController extends Controller
         // Session fixation prevention: regenerate ID and CSRF token before login.
         $request->session()->regenerate();
 
-        // Two-factor handoff: stash login intent in the session and let
-        // Fortify's two-factor challenge route handle verification. The user
-        // is NOT logged in yet at this point.
+        // Two-factor handoff: stash the challenged user id in the (admin)
+        // session and redirect to the admin-owned 2FA challenge under
+        // /admin/auth/. The user is NOT logged in yet at this point.
+        //
+        // Remember-me is disabled for admin sessions by design — no
+        // `login.remember` key is set, and the admin login form does not
+        // collect the remember field.
         if ($user->two_factor_secret) {
-            $request->session()->put([
-                'login.id'       => $user->getKey(),
-                'login.remember' => $request->boolean('remember'),
-            ]);
+            $request->session()->put(['login.id' => $user->getKey()]);
 
-            return redirect()->route('two-factor.login');
+            return redirect()->route('admin.auth.two-factor.login');
         }
 
-        Auth::guard('web')->login($user, $request->boolean('remember'));
+        // Remember-me hard-disabled for admin login.
+        Auth::guard('web')->login($user, false);
 
         return redirect()->intended(route('admin.dashboard'));
     }

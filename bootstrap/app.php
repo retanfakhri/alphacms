@@ -18,16 +18,23 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        $middleware->web(append: [
-            HandleAppearance::class,
-            HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
-            \App\Http\Middleware\SessionSecurityMiddleware::class,
-            \App\Http\Middleware\UpdateUserLastActive::class,
-            \App\Http\Middleware\CDNCorrelationMiddleware::class,
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
-            \App\Http\Middleware\VerifyCDNRequestMiddleware::class,
-        ]);
+        $middleware->web(
+            prepend: [
+                // Runs before StartSession so session.cookie / session.path
+                // mutations take effect on the admin session bootstrap.
+                \App\Http\Middleware\ScopeAdminSession::class,
+            ],
+            append: [
+                HandleAppearance::class,
+                HandleInertiaRequests::class,
+                AddLinkHeadersForPreloadedAssets::class,
+                \App\Http\Middleware\SessionSecurityMiddleware::class,
+                \App\Http\Middleware\UpdateUserLastActive::class,
+                \App\Http\Middleware\CDNCorrelationMiddleware::class,
+                \App\Http\Middleware\SecurityHeadersMiddleware::class,
+                \App\Http\Middleware\VerifyCDNRequestMiddleware::class,
+            ],
+        );
         $middleware->alias([
             'admin' => \App\Http\Middleware\CanAccessAdmin::class,
         ]);
