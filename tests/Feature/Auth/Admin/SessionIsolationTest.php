@@ -127,6 +127,33 @@ test('admin logout does not affect frontend session', function () {
     expect(auth()->check())->toBeFalse();
 });
 
+// ─── Guest redirect: /admin/* → admin login, not frontend login ─────────
+
+test('unauthenticated visit to /admin redirects to admin login, not frontend login', function () {
+    $response = $this->get('/admin');
+
+    $response->assertRedirect(route('admin.auth.login'));
+    // Specifically NOT redirecting to the frontend Fortify route.
+    $location = (string) $response->headers->get('Location');
+    expect($location)->toContain('/admin/auth/login');
+    // Frontend /login would end with exactly "/login", admin ends with "/admin/auth/login".
+    expect(rtrim(parse_url($location, PHP_URL_PATH) ?: '', '/'))->toBe('/admin/auth/login');
+});
+
+test('unauthenticated visit to nested /admin/users path redirects to admin login', function () {
+    $response = $this->get('/admin/users');
+
+    $response->assertRedirect(route('admin.auth.login'));
+});
+
+test('unauthenticated visit to / (frontend) still redirects to frontend login', function () {
+    // Frontend redirect behavior must remain untouched.
+    $response = $this->get('/dashboard'); // protected frontend route
+
+    $response->assertRedirect(route('login'));
+    expect($response->headers->get('Location'))->not->toContain('/admin');
+});
+
 // ─── Remember-me removed for admin ───────────────────────────────────────
 
 test('admin login ignores any client-supplied remember field', function () {
